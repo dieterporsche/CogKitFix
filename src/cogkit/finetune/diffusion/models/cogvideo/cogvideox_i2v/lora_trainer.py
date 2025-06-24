@@ -149,6 +149,7 @@ class CogVideoXI2VLoraTrainer(DiffusionTrainer):
             "image": [],
             "image_preprocessed": [],
             "encoded_videos": [],
+            "filename": [],
         }
 
         for sample in samples:
@@ -157,6 +158,7 @@ class CogVideoXI2VLoraTrainer(DiffusionTrainer):
             image = sample["image"]
             image_preprocessed = sample["image_preprocessed"]
             encoded_video = sample.get("encoded_video", None)
+            filename = sample.get("filename")
 
             ret["prompt"].append(prompt)
             ret["prompt_embedding"].append(prompt_embedding)
@@ -164,6 +166,8 @@ class CogVideoXI2VLoraTrainer(DiffusionTrainer):
             ret["image_preprocessed"].append(image_preprocessed)
             if encoded_video is not None:
                 ret["encoded_videos"].append(encoded_video)
+            if filename is not None:
+                ret["filename"].append(filename)
 
         ret["prompt_embedding"] = torch.stack(ret["prompt_embedding"])
         ret["image_preprocessed"] = torch.stack(ret["image_preprocessed"])

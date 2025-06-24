@@ -139,17 +139,25 @@ class CogVideoXT2VLoraTrainer(DiffusionTrainer):
 
     @override
     def collate_fn(self, samples: list[dict[str, Any]]) -> dict[str, Any]:
-        ret = {"prompt": [], "prompt_embedding": [], "encoded_videos": []}
+        ret = {
+            "prompt": [],
+            "prompt_embedding": [],
+            "encoded_videos": [],
+            "filename": [],
+        }
 
         for sample in samples:
             prompt = sample.get("prompt", None)
             prompt_embedding = sample.get("prompt_embedding", None)
             encoded_video = sample.get("encoded_video", None)
+            filename = sample.get("filename")
 
             ret["prompt"].append(prompt)
             ret["prompt_embedding"].append(prompt_embedding)
             if encoded_video is not None:
                 ret["encoded_videos"].append(encoded_video)
+            if filename is not None:
+                ret["filename"].append(filename)
 
         ret["prompt_embedding"] = torch.stack(ret["prompt_embedding"])
         ret["encoded_videos"] = (

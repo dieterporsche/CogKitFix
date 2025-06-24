@@ -186,6 +186,7 @@ class Cogview4Trainer(DiffusionTrainer):
             "image": [],
             "encoded_image": [],
             "text_attn_mask": None,
+            "filename": [],
         }
 
         for sample in samples:
@@ -193,6 +194,7 @@ class Cogview4Trainer(DiffusionTrainer):
             prompt_embedding = sample.get("prompt_embedding", None)
             image = sample.get("image", None)
             encoded_image = sample.get("encoded_image", None)
+            filename = sample.get("filename")
 
             ret["prompt"].append(prompt)
             ret["prompt_embedding"].append(prompt_embedding)
@@ -201,6 +203,8 @@ class Cogview4Trainer(DiffusionTrainer):
                 ret["image"].append(image)
             if encoded_image is not None:
                 ret["encoded_image"].append(encoded_image)
+            if filename is not None:
+                ret["filename"].append(filename)
 
         prompt_embedding, prompt_attention_mask = process_prompt_attention_mask(
             self.components.tokenizer,
