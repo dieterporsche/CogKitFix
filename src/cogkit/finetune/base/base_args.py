@@ -176,7 +176,17 @@ class BaseArgs(BaseModel):
         lr = yaml_dict.get("learning_rate")
         bs = yaml_dict.get("batch_size")
         if lr is not None and bs is not None:
-            repo_root = Path(__file__).resolve().parents[4]
+            # Find the repository root based on the current working directory.
+            # ``pyproject.toml`` exists in the repo root, so walk parents until
+            # it is found.  This works even when the package is installed in a
+            # Python environment.
+            cwd = Path.cwd().resolve()
+            repo_root = cwd
+            for parent in [cwd, *cwd.parents]:
+                if (parent / "pyproject.toml").exists():
+                    repo_root = parent
+                    break
+
             yaml_dict["output_dir"] = repo_root / f"Output1__LR_{lr}__BS_{bs}"
 
         return cls(**yaml_dict)
