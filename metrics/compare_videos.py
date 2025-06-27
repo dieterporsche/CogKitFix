@@ -10,6 +10,7 @@ import hashlib
 import json
 import base64
 import shutil
+import re
 import imageio.v2 as iio
 
 import streamlit as st
@@ -64,8 +65,17 @@ GEN_FOLDER = PROJECT_ROOT / "output"
 VIDEO_EXT  = {".mp4", ".avi", ".mov", ".mkv"}
 
 # --- Helferfunktionen ---
+def strip_suffix(name: str) -> str:
+    """Remove trailing `_XX00` pattern from basename."""
+    return re.sub(r"_[A-Za-z]{2}\d{2}$", "", name)
+
 def list_basenames(folder):
-    return {os.path.splitext(f)[0] for f in os.listdir(folder) if os.path.splitext(f)[1].lower() in VIDEO_EXT}
+    names = set()
+    for f in os.listdir(folder):
+        n, ext = os.path.splitext(f)
+        if ext.lower() in VIDEO_EXT:
+            names.add(strip_suffix(n))
+    return names
 
 def random_choice(names):
     return random.choice(sorted(names))
@@ -73,7 +83,7 @@ def random_choice(names):
 def find_file(folder, base):
     for f in os.listdir(folder):
         n, ext = os.path.splitext(f)
-        if n == base and ext.lower() in VIDEO_EXT:
+        if strip_suffix(n) == base and ext.lower() in VIDEO_EXT:
             return os.path.join(folder, f)
     return None
 

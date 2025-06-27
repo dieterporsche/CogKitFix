@@ -17,15 +17,15 @@ Damit sind alle Zahlen nun *bit‑genau* mit dem Streamlit‑UI identisch.
 🔧 **CONFIG** – Pfade & Device anpassen
 --------------------------------------------------------------------------------
 ```python
-ROOT_DIR          = Path(__file__).resolve().parent
-GT_DIR            = ROOT_DIR / "data" / "GroundTruth"
-GEN_DIR           = ROOT_DIR / "data" / "Generated"
-OUT_FILE          = ROOT_DIR / "metrics.txt"
-CUSTOM_METRICS_PY = ROOT_DIR / "metrics" / "custom_metrics.py"
-VIDEO_EXTS        = {".mp4", ".avi", ".mov", ".mkv"}
-DEVICE            = "cpu"        # "cuda" für GPU
-FFPROBE           = shutil.which("ffprobe") or "ffprobe"
-FFMPEG            = shutil.which("ffmpeg")  or "ffmpeg"
+ROOT_DIR   = Path(__file__).resolve().parent
+REPO_ROOT  = ROOT_DIR.parent
+GT_DIR     = Path("/path/to/GroundTruth")  # bleibt absolut
+OUTPUT_ROOT = REPO_ROOT / "output"
+CUSTOM_METRICS_PY = REPO_ROOT / "metrics" / "custom_metrics.py"
+VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
+DEVICE     = "cpu"  # "cuda" für GPU
+FFPROBE    = shutil.which("ffprobe") or "ffprobe"
+FFMPEG     = shutil.which("ffmpeg") or "ffmpeg"
 ```
 
 Aufrufen → `python batch_metrics.py`
@@ -41,7 +41,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, Tuple, List, Tuple as Tup
-
+import re
 import cv2  # type: ignore
 import numpy as np
 import torch
@@ -67,6 +67,7 @@ VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
 DEVICE = "cpu"  # oder "cuda"
 FFPROBE = shutil.which("ffprobe") or "ffprobe"
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
+
 
 # ---------------------------------------------------------------------------
 # 1️⃣  Hilfsfunktionen aus compare_videos.py  (unverändert kopiert)
@@ -175,14 +176,21 @@ def _load_metrics_module(path: Path):
 # 4️⃣  Batch‑Durchlauf
 # ---------------------------------------------------------------------------
 
+def _strip_suffix(name: str) -> str:
+    """Remove trailing `_XX00` like pattern from basename."""
+    return re.sub(r"_[A-Za-z]{2}\d{2}$", "", name)
+
 def _list_basenames(folder: Path) -> set[str]:
-    return {p.stem for p in folder.iterdir() if p.suffix.lower() in VIDEO_EXTS}
+    names: set[str] = set()
+    for p in folder.iterdir():
+        if p.suffix.lower() in VIDEO_EXTS:
+            names.add(_strip_suffix(p.stem))
+    return names
 
 
 def _find_video(folder: Path, basename: str) -> Path | None:
-    for ext in VIDEO_EXTS:
-        p = folder / f"{basename}{ext}"
-        if p.exists():
+    for p in folder.iterdir():
+        if p.suffix.lower() in VIDEO_EXTS and _strip_suffix(p.stem) == basename:
             return p
     return None
 
@@ -231,10 +239,12 @@ def _compute_for_dir(gen_dir: Path) -> Tup[List[str], Tup[float, float, float]]:
             continue
 
     # -- Schreiben --
+    from statistics import mean
+
     avg = (
-        float(np.mean(mses)) if mses else float("nan"),
-        float(np.mean(ssims)) if ssims else float("nan"),
-        float(np.mean(intrs)) if intrs else float("nan"),
+        float(mean(mses)) if mses else float("nan"),
+        float(mean(ssims)) if ssims else float("nan"),
+        float(mean(intrs)) if intrs else float("nan"),
     )
     return lines, avg
 
@@ -269,7 +279,7 @@ def main() -> None:
             all_lines.append("MSE\t\t\tSSIM\t\tINTRUSION")
             all_lines.append(f"{m_mse:.6f}\t{m_ssim:.6f}\t{m_intr:.6f}\n")
 
-        out_file = out_dir / f"metrics_{out_dir.name}.txt"
+        out_file = OUTPUT_ROOT / f"metrics_{out_dir.name}.txt"
         out_file.write_text("\n".join(all_lines))
         print(f"\n✅ Fertig → {out_file}")
 
