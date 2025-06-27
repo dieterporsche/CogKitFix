@@ -4,11 +4,11 @@ log_level: "INFO"  # Options: ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # ================ Model ================
 model_name: "cogvideox1.5-i2v"  # Options: ["cogvideox-i2v", "cogvideox1.5-i2v"]
-model_path: "THUDM/CogVideoX1.5-5B-I2V"
+model_path: "/mnt/models/CogVideoX1.5-5B-I2V"
 
 
 # ================ Output ================
-output_dir: "/path/to/output"
+output_dir: "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/outputTest"
 
 
 # ================ Tracker ================
@@ -16,7 +16,7 @@ report_to: null  # Options: ["wandb"]
 
 
 # ================ Data ================
-data_root: "/path/to/i2v/data"
+data_root: "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/SmallSplit/Train"
 
 
 # ================ Training ================
@@ -43,15 +43,15 @@ enable_packing: false
 # Note:
 #   for CogVideoX series models, number of training frames should be **8N+1**
 #   for CogVideoX1.5 series models, number of training frames should be **16N+1**
-train_resolution: [81, 768, 1360]  # [Frames, Height, Width]
+train_resolution: [17, 768, 768]  # [Frames, Height, Width]
 
-train_epochs: 1
+train_epochs: 2
 batch_size: 1
 gradient_accumulation_steps: 1
 mixed_precision: "bf16"  # Options: ["fp32", "fp16", "bf16"]
-learning_rate: 2.0e-5
+learning_rate: 5.0e-5
 
-num_workers: 8
+num_workers: 32
 pin_memory: true
 
 checkpointing_steps: 0
