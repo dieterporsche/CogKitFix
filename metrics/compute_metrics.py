@@ -40,7 +40,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Tuple as Tup
 
 import cv2  # type: ignore
 import numpy as np
@@ -51,23 +51,22 @@ from tqdm import tqdm
 # ---------------------------------------------------------------------------
 # CONFIG --------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-ROOT_DIR          = Path(__file__).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = ROOT_DIR.parent
+
 GT_DIR = Path(
     "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
 )
-GEN_DIR = Path(
-    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/Generated"
-)
-OUT_FILE = Path(
-    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/metrics/metrics.txt"
-)
-CUSTOM_METRICS_PY = Path(
-    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/metrics/custom_metrics.py"
-)
-VIDEO_EXTS        = {".mp4", ".avi", ".mov", ".mkv"}
-DEVICE            = "cpu"  # oder "cuda"
-FFPROBE           = shutil.which("ffprobe") or "ffprobe"
-FFMPEG            = shutil.which("ffmpeg")  or "ffmpeg"
+# Ordner mit Trainingsausgaben (Output*/validation_Epoch_*)
+OUTPUT_ROOT = REPO_ROOT / "output"
+
+# Dynamisch geladene custom_metrics.py aus diesem Repository
+CUSTOM_METRICS_PY = REPO_ROOT / "metrics" / "custom_metrics.py"
+
+VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
+DEVICE = "cpu"  # oder "cuda"
+FFPROBE = shutil.which("ffprobe") or "ffprobe"
+FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
 
 # ---------------------------------------------------------------------------
 # 1️⃣  Hilfsfunktionen aus compare_videos.py  (unverändert kopiert)
@@ -188,42 +187,43 @@ def _find_video(folder: Path, basename: str) -> Path | None:
     return None
 
 
-def main() -> None:
-    if not (GT_DIR.exists() and GEN_DIR.exists()):
-        sys.exit("❌ GroundTruth- oder Generated-Ordner nicht gefunden.")
-    common = _list_basenames(GT_DIR) & _list_basenames(GEN_DIR)
-    if not common:
-        sys.exit("❌ Keine gemeinsamen Videodateien gefunden.")
+def _compute_for_dir(gen_dir: Path) -> Tup[List[str], Tup[float, float, float]]:
+    if not gen_dir.exists():
+        raise FileNotFoundError(gen_dir)
+
+    common = _list_basenames(GT_DIR) & _list_basenames(gen_dir)
 
     lines = ["MSE\t\t\tSSIM\t\tINTRUSION\tfile"]
-    for base in tqdm(sorted(common), desc="Berechne Metriken"):
+    mses, ssims, intrs = [], [], []
+
+    for base in tqdm(sorted(common), desc=f"{gen_dir.name}"):
         p_gt = _find_video(GT_DIR, base)
-        p_gen = _find_video(GEN_DIR, base)
+        p_gen = _find_video(gen_dir, base)
         if p_gt is None or p_gen is None:
             print(f"⚠️  Überspringe {base}: Datei fehlt")
             continue
 
         try:
             # -- Re‑Encode falls nötig (exakt wie im UI) --
-            p_gt_h264  = _ensure_h264(p_gt)
+            p_gt_h264 = _ensure_h264(p_gt)
             p_gen_h264 = _ensure_h264(p_gen)
 
-            # -- Frames laden --
             gt = _read_video_frames(p_gt_h264)
             gen = _read_video_frames(p_gen_h264)
             if gt.numel() == 0 or gen.numel() == 0:
                 raise RuntimeError("Leeres Video")
 
-            # -- Alignment --
             gt, gen = _align(gt, gen)
 
-            # -- Metriken --
             metrics_mod = _load_metrics_module(CUSTOM_METRICS_PY)
             res: Dict[str, Tuple[float, str]] = metrics_mod.compute(gt, gen)  # type: ignore[arg-type]
 
-            mse       = res["mse"][0]
-            ssim      = res["ssim"][0]
+            mse = res["mse"][0]
+            ssim = res["ssim"][0]
             intrusion = res["intrusion"][0]
+            mses.append(mse)
+            ssims.append(ssim)
+            intrs.append(intrusion)
             lines.append(f"{mse:.6f}\t{ssim:.6f}\t{intrusion:.6f}\t{base}")
 
         except Exception as e:
@@ -231,8 +231,47 @@ def main() -> None:
             continue
 
     # -- Schreiben --
-    OUT_FILE.write_text("\n".join(lines))
-    print(f"\n✅ Fertig → {OUT_FILE}")
+    avg = (
+        float(np.mean(mses)) if mses else float("nan"),
+        float(np.mean(ssims)) if ssims else float("nan"),
+        float(np.mean(intrs)) if intrs else float("nan"),
+    )
+    return lines, avg
+
+
+def main() -> None:
+    if not GT_DIR.exists():
+        sys.exit("❌ GroundTruth-Ordner nicht gefunden.")
+
+    for out_dir in sorted(OUTPUT_ROOT.glob("Output*")):
+        epoch_dirs = sorted(out_dir.glob("validation_Epoch_*"))
+        if not epoch_dirs:
+            continue
+
+        all_lines = ["------------------------------------------------------------",
+                     f"###### {out_dir.name} ######",
+                     "------------------------------------------------------------"]
+        averages: Dict[str, Tup[float, float, float]] = {}
+
+        for e_dir in epoch_dirs:
+            epoch_label = e_dir.name.replace("validation_", "")
+            lines, avg = _compute_for_dir(e_dir)
+            averages[epoch_label] = avg
+            all_lines.append("")
+            all_lines.append(f"## {epoch_label}")
+            all_lines.extend(lines)
+
+        all_lines.append("------------------------------------------------------------")
+        all_lines.append("------------------------------------------------------------")
+        all_lines.append("#### Average ALL: ####\n")
+        for epoch_label, (m_mse, m_ssim, m_intr) in averages.items():
+            all_lines.append(f"{epoch_label}:")
+            all_lines.append("MSE\t\t\tSSIM\t\tINTRUSION")
+            all_lines.append(f"{m_mse:.6f}\t{m_ssim:.6f}\t{m_intr:.6f}\n")
+
+        out_file = out_dir / f"metrics_{out_dir.name}.txt"
+        out_file.write_text("\n".join(all_lines))
+        print(f"\n✅ Fertig → {out_file}")
 
 
 if __name__ == "__main__":
