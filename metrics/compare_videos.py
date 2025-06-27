@@ -46,7 +46,7 @@ if "metrics_ready" not in st.session_state:
 PAGES_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = PAGES_DIR.parent
 
-CUSTOM_METRICS_FILE = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/metrics/custom_metrics.py"
+CUSTOM_METRICS_FILE = PROJECT_ROOT / "metrics" / "custom_metrics.py"
 
 # Holt die Visualisierungs-Konfiguration aus custom_metrics.py
 try:
@@ -60,7 +60,7 @@ except Exception as e:
 
 # --- Konfiguration: Pfade & Extensions ---
 GT_FOLDER  = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
-GEN_FOLDER = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/Generated"
+GEN_FOLDER = PROJECT_ROOT / "output"
 VIDEO_EXT  = {".mp4", ".avi", ".mov", ".mkv"}
 
 # --- Helferfunktionen ---
