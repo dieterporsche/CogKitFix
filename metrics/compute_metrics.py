@@ -53,7 +53,7 @@ from tqdm import tqdm
 # ---------------------------------------------------------------------------
 ROOT_DIR          = Path(__file__).resolve().parent
 GT_DIR = Path(
-    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/GroundTruth"
+    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
 )
 GEN_DIR = Path(
     "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/Generated"
