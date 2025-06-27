@@ -59,7 +59,7 @@ except Exception as e:
     _METRIC_CFG = {}
 
 # --- Konfiguration: Pfade & Extensions ---
-GT_FOLDER  = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/GroundTruth"
+GT_FOLDER  = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
 GEN_FOLDER = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/streamlit/data/Generated"
 VIDEO_EXT  = {".mp4", ".avi", ".mov", ".mkv"}
 
