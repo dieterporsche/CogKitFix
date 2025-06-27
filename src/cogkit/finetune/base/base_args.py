@@ -179,7 +179,7 @@ class BaseArgs(BaseModel):
             # ``pyproject.toml``.  If not found, fall back to the current
             # directory.
             # --------------------------------------------------------------
-           repo_root = next(
+            repo_root = next(
                 (p for p in [cwd, *cwd.parents] if (p / "pyproject.toml").exists()),
                 cwd,
             )
