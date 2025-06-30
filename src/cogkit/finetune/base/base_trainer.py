@@ -81,6 +81,13 @@ class BaseTrainer(ABC):
             level=self.uargs.log_level,
         )
 
+        # --------------------------------------------------------------
+        # Log training loss to a separate file in the output directory
+        # --------------------------------------------------------------
+        self.loss_log_file = self.uargs.output_dir / "train_losses.txt"
+        if is_main_process():
+            self.loss_log_file.write_text("")
+
         if self.uargs.seed is not None:
             set_global_seed(self.uargs.seed)
 
@@ -343,6 +350,9 @@ class BaseTrainer(ABC):
                         self.logger.info(
                             "Step %d: loss=%.6f", global_step, logs["loss"]
                         )
+                        if is_main_process():
+                            with open(self.loss_log_file, "a") as lf:
+                                lf.write(f"{global_step}\t{logs['loss']:.6f}\n")
 
                     if self.tracker is not None:
                         self.tracker.log(logs, step=global_step)
@@ -370,7 +380,8 @@ class BaseTrainer(ABC):
     def on_epoch_end(self, epoch: int, global_step: int) -> None:
         """Hook called at the end of each training epoch."""
         # --------------------------------------------------------------
-        # At the end of every epoch save a checkpoint and run validation
+        # At the end of every epoch save a checkpoint and optionally run
+        # validation on the final epoch
         # --------------------------------------------------------------
         ckpt_path = self.maybe_save_checkpoint(global_step, must_save=True)
         if ckpt_path is not None:
@@ -380,7 +391,8 @@ class BaseTrainer(ABC):
         else:
             epoch_ckpt = None
 
-        if self.uargs.do_validation:
+        # Only run validation at the last epoch
+        if self.uargs.do_validation and (epoch + 1) == self.uargs.train_epochs:
             free_memory()
             self.validate(epoch + 1, ckpt_path=epoch_ckpt)
 
