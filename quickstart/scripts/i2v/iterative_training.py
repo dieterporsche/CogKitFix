@@ -109,11 +109,15 @@ def _parse_metrics_file(path: Path) -> Dict[str, float]:
         line = lines[idx]
         if line.startswith("Epoch_"):
             epoch = line.rstrip(":")
-            if idx + 1 < len(lines):
-                vals = lines[idx + 1].split()
-                if len(vals) >= 1:
-                    metrics[epoch] = float(vals[0])
-            idx += 2
+            idx += 1
+            if idx < len(lines) and lines[idx].lower() == "mse":
+                idx += 1
+            if idx < len(lines):
+                try:
+                    metrics[epoch] = float(lines[idx].split()[0])
+                except ValueError:
+                    pass
+            idx += 1
         else:
             idx += 1
     return metrics
