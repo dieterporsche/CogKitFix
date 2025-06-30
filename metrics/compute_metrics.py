@@ -41,6 +41,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, Tuple, List, Tuple as Tup
+import logging
 import re
 import cv2  # type: ignore
 import numpy as np
@@ -67,6 +68,13 @@ VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv"}
 DEVICE = "cpu"  # oder "cuda"
 FFPROBE = shutil.which("ffprobe") or "ffprobe"
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+)
+logger = logging.getLogger("compute_metrics")
+logger.addHandler(logging.StreamHandler())
 
 
 # ---------------------------------------------------------------------------
@@ -195,14 +203,14 @@ def _find_video(folder: Path, basename: str) -> Path | None:
     return None
 
 
-def _compute_for_dir(gen_dir: Path) -> Tup[List[str], Tup[float, float, float]]:
+def _compute_for_dir(gen_dir: Path) -> Tup[List[str], float]:
     if not gen_dir.exists():
         raise FileNotFoundError(gen_dir)
 
     common = _list_basenames(GT_DIR) & _list_basenames(gen_dir)
 
-    lines = ["MSE\t\t\tSSIM\t\tINTRUSION\tfile"]
-    mses, ssims, intrs = [], [], []
+    lines = ["MSE\tfile"]
+    mses = []
 
     for base in tqdm(sorted(common), desc=f"{gen_dir.name}"):
         p_gt = _find_video(GT_DIR, base)
@@ -227,25 +235,17 @@ def _compute_for_dir(gen_dir: Path) -> Tup[List[str], Tup[float, float, float]]:
             res: Dict[str, Tuple[float, str]] = metrics_mod.compute(gt, gen)  # type: ignore[arg-type]
 
             mse = res["mse"][0]
-            ssim = res["ssim"][0]
-            intrusion = res["intrusion"][0]
             mses.append(mse)
-            ssims.append(ssim)
-            intrs.append(intrusion)
-            lines.append(f"{mse:.6f}\t{ssim:.6f}\t{intrusion:.6f}\t{base}")
+            lines.append(f"{mse:.6f}\t{base}")
 
         except Exception as e:
-            print(f"❌ Fehler bei {base}: {e}")
+            logger.error("Fehler bei %s: %s", base, e)
             continue
 
     # -- Schreiben --
     from statistics import mean
 
-    avg = (
-        float(mean(mses)) if mses else float("nan"),
-        float(mean(ssims)) if ssims else float("nan"),
-        float(mean(intrs)) if intrs else float("nan"),
-    )
+    avg = float(mean(mses)) if mses else float("nan")
     return lines, avg
 
 
@@ -261,7 +261,7 @@ def main() -> None:
         all_lines = ["------------------------------------------------------------",
                      f"###### {out_dir.name} ######",
                      "------------------------------------------------------------"]
-        averages: Dict[str, Tup[float, float, float]] = {}
+        averages: Dict[str, float] = {}
 
         for e_dir in epoch_dirs:
             epoch_label = e_dir.name.replace("validation_", "")
@@ -274,14 +274,15 @@ def main() -> None:
         all_lines.append("------------------------------------------------------------")
         all_lines.append("------------------------------------------------------------")
         all_lines.append("#### Average ALL: ####\n")
-        for epoch_label, (m_mse, m_ssim, m_intr) in averages.items():
+        for epoch_label, m_mse in averages.items():
             all_lines.append(f"{epoch_label}:")
-            all_lines.append("MSE\t\t\tSSIM\t\tINTRUSION")
-            all_lines.append(f"{m_mse:.6f}\t{m_ssim:.6f}\t{m_intr:.6f}\n")
+            all_lines.append("MSE")
+            all_lines.append(f"{m_mse:.6f}\n")
+            logger.info("%s -> MSE=%.6f", epoch_label, m_mse)
 
         out_file = OUTPUT_ROOT / f"metrics_{out_dir.name}.txt"
         out_file.write_text("\n".join(all_lines))
-        print(f"\n✅ Fertig → {out_file}")
+        logger.info("Fertig → %s", out_file)
 
 
 if __name__ == "__main__":

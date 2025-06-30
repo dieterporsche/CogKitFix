@@ -359,7 +359,7 @@ class DiffusionTrainer(BaseTrainer):
         else:
             epoch_ckpt = None
 
-        if self.uargs.do_validation:
+        if self.uargs.do_validation and (epoch + 1) == self.uargs.train_epochs:
             free_memory()
             self.validate(epoch + 1, ckpt_path=epoch_ckpt)
 
