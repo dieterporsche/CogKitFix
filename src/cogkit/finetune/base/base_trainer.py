@@ -339,6 +339,11 @@ class BaseTrainer(ABC):
 
                     progress_bar.set_postfix(logs)
 
+                    if "loss" in logs:
+                        self.logger.info(
+                            "Step %d: loss=%.6f", global_step, logs["loss"]
+                        )
+
                     if self.tracker is not None:
                         self.tracker.log(logs, step=global_step)
 
