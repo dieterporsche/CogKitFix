@@ -48,18 +48,19 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-
+import os
 # ---------------------------------------------------------------------------
 # CONFIG --------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 ROOT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = ROOT_DIR.parent
 
-GT_DIR = Path(
-    "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
-)
+# GT_DIR = Path(
+#     "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/quickstart/data/PO546_ND_VFF_FMH_A000_M001-hhl-RP1_SR2A-2-10-1_270_47_24.mp4"
+# )
+GT_DIR = ROOT_DIR / "GT"
 # Ordner mit Trainingsausgaben (Output*/validation_Epoch_*)
-OUTPUT_ROOT = REPO_ROOT / "output"
+OUTPUT_ROOT = REPO_ROOT / "outputs"
 
 # Dynamisch geladene custom_metrics.py aus diesem Repository
 CUSTOM_METRICS_PY = REPO_ROOT / "metrics" / "custom_metrics.py"
@@ -253,7 +254,7 @@ def main() -> None:
     if not GT_DIR.exists():
         sys.exit("❌ GroundTruth-Ordner nicht gefunden.")
 
-    for out_dir in sorted(OUTPUT_ROOT.glob("Output*")):
+    for out_dir in sorted(OUTPUT_ROOT.glob("Outputs*")):
         epoch_dirs = sorted(out_dir.glob("validation_Epoch_*"))
         if not epoch_dirs:
             continue

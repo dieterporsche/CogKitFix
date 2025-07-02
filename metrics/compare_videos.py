@@ -60,8 +60,10 @@ except Exception as e:
     _METRIC_CFG = {}
 
 # --- Konfiguration: Pfade & Extensions ---
-GT_FOLDER  = "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/Split/TestReference/test/videos"
-GEN_FOLDER = PROJECT_ROOT / "output"
+
+
+GT_FOLDER  = PROJECT_ROOT / "quickstart" / "data"
+GEN_FOLDER = PROJECT_ROOT / "outputs"
 VIDEO_EXT  = {".mp4", ".avi", ".mov", ".mkv"}
 
 # --- Helferfunktionen ---

@@ -4,19 +4,21 @@ log_level: "INFO"  # Options: ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # ================ Model ================
 model_name: "cogvideox1.5-i2v"  # Options: ["cogvideox-i2v", "cogvideox1.5-i2v"]
-model_path: "/mnt/models/CogVideoX1.5-5B-I2V"
+model_path: "${env:MODEL_PATH}"
+
 
 
 # ================ Output ================
-output_dir: "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/HuggingFace/CogKitFix/outputTest"
+output_dir: "${env:OUTPUT_DIR}"
 
 
 # ================ Tracker ================
 report_to: null  # Options: ["wandb"]
 
 
+
 # ================ Data ================
-data_root: "/home/azureuser/cloudfiles/code/Users/dieter.holstein/runs/DataPreparation/CogVideo/SmallSplit/Train"
+data_root: "${env:DATA_ROOT}"
 
 
 # ================ Training ================
@@ -28,21 +30,13 @@ strategy: "DDP"  # Options: ["DDP", "SHARD_GRAD_OP", "FULL_SHARD", "HYBRID_SHARD
 # This will offload model param and grads to CPU memory to save GPU memory, but will slow down training
 offload_params_grads: false
 
-# This will increase memory usage since gradients are sharded during accumulation step.
-# Note: When used with offload_params_grads, model parameters and gradients will only be offloaded
-#   to the CPU during the final synchronization (still retained on GPU in gradient accumulation steps)
-#   which means offload_params_grads is meaningless when used with no_grad_sync_when_accumulating
+
 no_grad_sync_when_accumulating: false
 
-# When enable_packing is true, training will use the native image resolution,
-#   otherwise all images will be resized to train_resolution, which may distort the original aspect ratio.
-# IMPORTANT: When changing enable_packing from true to false (or false to true),
-#   make sure to clear the `.cache` directories in your `data_root/train` and `data_root/test` folders if they exist.
+
 enable_packing: false
 
-# Note:
-#   for CogVideoX series models, number of training frames should be **8N+1**
-#   for CogVideoX1.5 series models, number of training frames should be **16N+1**
+
 train_resolution: [17, 768, 768]  # [Frames, Height, Width]
 
 train_epochs: 2

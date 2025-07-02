@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CONFIG_TEMPLATE = Path(__file__).parent / "config.yaml"
 TRAIN_SCRIPT = Path(__file__).parent.parent / "train.py"
 METRICS_SCRIPT = ROOT / "metrics" / "compute_metrics.py"
-OUTPUT_ROOT = ROOT / "output"
+OUTPUT_ROOT = ROOT / "outputs"
 
 OUTPUT_ROOT.mkdir(exist_ok=True)
 LOG_FILE = OUTPUT_ROOT / "iterative_training.log"
@@ -43,6 +43,11 @@ def _count_training_data(data_root: Path) -> int:
 def _write_config(lr: float, batch_size: int, epochs: int) -> Path:
     with open(CONFIG_TEMPLATE, "r") as f:
         cfg = yaml.safe_load(f)
+    
+    import os
+    cfg["data_root"]  = os.environ["DATA_ROOT"]
+    cfg["model_path"] = os.environ["MODEL_PATH"]
+
     cfg["learning_rate"] = lr
     cfg["batch_size"] = batch_size
     cfg["train_epochs"] = epochs
@@ -127,15 +132,19 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--output-dir", type=str, default="outputs")
     parser.add_argument("--learning-rate", type=float, required=True)
     parser.add_argument("--batch-size", type=int, required=True)
     parser.add_argument("--epochs", type=int, required=True)
     args = parser.parse_args()
 
+    global OUTPUT_ROOT
+    OUTPUT_ROOT = Path(args.output_dir).resolve()
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+
     cfg = _write_config(args.learning_rate, args.batch_size, args.epochs)
     _run_training(cfg)
     _run_metrics()
-
 
 if __name__ == "__main__":
     main()

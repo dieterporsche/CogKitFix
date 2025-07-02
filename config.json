@@ -1,0 +1,6 @@
+{
+  "subscription_id": "898ebc3c-57d6-4f37-b363-18025f16ef18",
+  "resource_group":  "CloudCityManagedServices",
+  "workspace_name":  "playground",
+  "location":        "westeurope"        
+}
